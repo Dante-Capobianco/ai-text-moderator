@@ -1,2 +1,2 @@
-#Training loop, including batching, loss calculation, backpropagation using the optimizer, and evaluating the model on validation & test data
+#Training loop, including batching, loss calculation, and backpropagation using the optimizer to update weights
 #Saves model as well
