@@ -1,1 +1,1 @@
-#Load and store datasets for training, validation, and testing
+#Load raw data, initial preprocessing (ie filtering missing/unncessary data), split into training, validation, and testing
