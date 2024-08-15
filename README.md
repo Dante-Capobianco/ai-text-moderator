@@ -7,3 +7,4 @@ Steps to setup
 3. Select Python as SDK
 4. Install neccessary dependencies (found in setup.py)
 
+test
