@@ -4,4 +4,6 @@ AI model flagging potentially harmful text-based content, such as violent, expli
 Steps to setup
 1. Clone repo to local IDE
 2. Install Python plugin (i.e. on marketplace on IntelliJ)
-3. CONTINUE
+3. Select Python as SDK
+4. Install neccessary dependencies (found in setup.py)
+
