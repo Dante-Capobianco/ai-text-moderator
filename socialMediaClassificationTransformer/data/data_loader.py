@@ -46,9 +46,9 @@ def clean_text(message):
     message = re.sub(r'[^a-zA-Z0-9.,\s]', '', message)
     # Replace multiple white spaces with a single space
     message = re.sub(r'\s+', ' ', message)
-    
+
     return message.strip()
-    
+
 def process_data(input_file):
     data = []
     csv.field_size_limit(1000000)
