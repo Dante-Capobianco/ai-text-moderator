@@ -10,3 +10,5 @@ Steps to setup
 2. Install Python plugin (i.e. on marketplace on IntelliJ)
 3. Select Python as SDK
 4. Install neccessary dependencies (found in setup.py)
+
+make note of performing gpu optimziations using tensorflow-gpu
