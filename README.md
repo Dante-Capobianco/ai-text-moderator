@@ -12,3 +12,5 @@ Steps to setup
 4. Install neccessary dependencies (found in setup.py)
 
 make note of performing gpu optimziations using tensorflow-gpu
+
+consider adding weight in embeddings for training only if rare labels involved in certain sequences 
