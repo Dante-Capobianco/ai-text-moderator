@@ -13,4 +13,4 @@ Steps to setup
 
 make note of performing gpu optimziations using tensorflow-gpu
 
-consider adding weight in embeddings for training only if rare labels involved in certain sequences 
+consider adding weight in embeddings for training only if rare labels involved in certain sequences and/or greater weight in loss finction for mistake on rare classes
