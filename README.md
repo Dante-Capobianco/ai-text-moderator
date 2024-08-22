@@ -15,7 +15,8 @@ make note of performing gpu optimziations using tensorflow-gpu
 
 consider adding weight in embeddings for training only if rare labels involved in certain sequences and/or greater weight in loss finction for mistake on rare classes
 
-Citations
-	•	Cormack, G. V. (2007). TREC 2007 Spam Track Public Corpus [Data set]. University of Waterloo. Available at: https://plg.uwaterloo.ca/~gvcormac/treccorpus07/about.html
-    •	Kaggle. (2019). Jigsaw Unintended Bias in Toxicity Classification [Data set]. Available at: https://www.kaggle.com/c/jigsaw-unintended-bias-in-toxicity-classification/data
-	•	Kaggle. (2018). Jigsaw Toxic Comment Classification Challenge [Data set]. Available at: https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/data
+### Citations
+
+- **Cormack, G. V. (2007). TREC 2007 Spam Track Public Corpus [Data set].** University of Waterloo. Available at: [https://plg.uwaterloo.ca/~gvcormac/treccorpus07/about.html](https://plg.uwaterloo.ca/~gvcormac/treccorpus07/about.html)
+- **Kaggle. (2019). Jigsaw Unintended Bias in Toxicity Classification [Data set].** Available at: [https://www.kaggle.com/c/jigsaw-unintended-bias-in-toxicity-classification/data](https://www.kaggle.com/c/jigsaw-unintended-bias-in-toxicity-classification/data)
+- **Kaggle. (2018). Jigsaw Toxic Comment Classification Challenge [Data set].** Available at: [https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/data](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge/data)
