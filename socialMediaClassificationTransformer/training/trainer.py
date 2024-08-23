@@ -1,46 +1,61 @@
-#Training loop, including batching, loss calculation, backpropagation using the optimizer to update weights, evaluating the model on validation data every 1+ epochs
-#Saves model as well
+#Loss function
 
-# ../training/trainer.py
+import tensorflow as tf
+from tensorflow.python.ops.numpy_ops import float32
 
-from socialMediaClassificationTransformer.models.embedding import init_embedding_weights, init_embedding, backward_pass
-from socialMediaClassificationTransformer.models.transformer import run_transformer
-from socialMediaClassificationTransformer.models.attention import init_attention_weights
-from socialMediaClassificationTransformer.training.config import EPOCHS, DIMENSION
+from socialMediaClassificationTransformer.training.config import \
+    BINARY_CROSS_ENTROPY_WITH_THRESHOLDS_AND_NEUTRAL_EXCLUSIVITY, PENALTY_FACTOR
+
+class WarmupThenDecaySchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
+    @tf.function
+    def __init__(self, initial_learning_rate, warmup_steps, decay_steps, decay_rate):
+        super(WarmupThenDecaySchedule, self).__init__()
+        self.initial_learning_rate = initial_learning_rate
+        self.warmup_steps = warmup_steps
+        self.decay_steps = decay_steps
+        self.decay_rate = decay_rate
+
+    @tf.function
+    def __call__(self, step):
+        step = tf.cast(step, tf.float32)
+        self.warmup_steps = tf.cast(self.warmup_steps, tf.float32)
+        self.decay_steps = tf.cast(self.decay_steps, tf.float32)
+        self.decay_rate = tf.cast(self.decay_rate, tf.float32)
+        self.initial_learning_rate = tf.cast(self.initial_learning_rate, tf.float32)
+        # Warmup phase
+        if step < self.warmup_steps:
+            return self.initial_learning_rate * (step / self.warmup_steps)
+        # Decay phase
+        return self.initial_learning_rate * self.decay_rate ** ((step - self.warmup_steps) / self.decay_steps)
+
+@tf.function
+def loss_with_neutral_penalty(loss, probabilities):
+    # Implement the penalty for neutral with other labels
+    neutral_predictions = probabilities[:, -1]  # Assuming neutral is the last label
+    other_predictions = probabilities[:, :-1]
+
+    # Calculate the penalty: if neutral is predicted with high probability and any other label is predicted with high probability
+    penalty = tf.reduce_sum(neutral_predictions * tf.reduce_max(other_predictions, axis=1))
+
+    # Combine the loss and penalty
+    total_loss = loss + (tf.cast(penalty, float32) * PENALTY_FACTOR)
+    return total_loss
 
 
-def train(embedding, epochs, embed_weights, attention_weights):
-    for epoch in range(epochs):  # Simulate the training epochs
-        print(f"Epoch {epoch+1}/{epochs}")
-        i = 1
+def flatten_weights(embed_weights, attention_weights, ffn_weights, classification_weights):
+    # Flatten embed_weights (already a single tensor)
+    flattened_weights = [embed_weights[0]["embed_weights"]]
 
-        for batch in embedding:
-            print(f"Batch {i}/{len(embedding)}")
-            #call transformer to run through layers once
-            ouput = run_transformer(batch, embed_weights, attention_weights, True)
-            # Assume some loss calculation here (replace with actual implementation)
-            # loss = calculate_loss(output)
+    # Flatten attention_weights (list of dictionaries)
+    for layer_weights in attention_weights:
+        flattened_weights.extend(layer_weights.values())
 
-            # Backpropagation: update weights based on the loss
-            # gradient = calculate_gradient(loss) #function in embedding.py
-            # embedding_weights = backward_pass(embedding_weights,gradient)
-            # gradients = calculate_gradient(loss) #function in attention.py with this format:
-            # gradients = {
-            #     "W_q": np.random.randn(embedding_dim, embedding_dim),
-            #     "W_k": np.random.randn(embedding_dim, embedding_dim),
-            #     "W_v": np.random.randn(embedding_dim, embedding_dim),
-            #     "W_o": np.random.randn(embedding_dim, embedding_dim),
-            # }
-            # attention_weights = update_weights(attention_weights,gradients)
-            #print(f"Updated Embeddings: {embedding_weights[:5]}")  # Print a preview of updated embeddings
-            i += 1
+    # Flatten ffn_weights (list of tuples)
+    for W_1, W_2 in ffn_weights:
+        flattened_weights.append(W_1)
+        flattened_weights.append(W_2)
 
-# Example usage
-if __name__ == "__main__":
+    # Flatten classification_weights (already a single tensor)
+    flattened_weights.append(classification_weights[0]["class_weights"])
 
-    embedding_weights = init_embedding_weights()
-    att_weights = init_attention_weights()
-    data = init_embedding("../data/tokenized/tokenized_train.pkl")
-
-    # Start training
-    train(data, EPOCHS, embedding_weights, att_weights)
+    return flattened_weights
