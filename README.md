@@ -1,7 +1,9 @@
 # ai-text-moderator
 AI model flagging potentially harmful text-based content, such as violent, explicit, or sexual content, hate speech, insults, or spam
 
-### Download Dataset
+## Steps to Configure & Run
+
+### 1. Download Dataset
 [Download the dataset from Google Drive](https://drive.google.com/drive/folders/1oZYg86yW4SJTQVdV3iR5N0IkcwxV_0zP?usp=sharing)
 
 
@@ -11,9 +13,8 @@ Steps to setup
 3. Select Python as SDK
 4. Install neccessary dependencies (found in setup.py)
 
-make note of performing gpu optimziations using tensorflow-gpu
-
-consider adding weight in embeddings for training only if rare labels involved in certain sequences and/or greater weight in loss finction for mistake on rare classes
+### 2. Download Dataset
+*Note can use requirements.txt to ensure configured properly
 
 ### Report
 Available at: [CapoDev Multi-Label Text Classification Transformer](https://docs.google.com/document/d/1tZsWFJ38rv13aUw0n1uIgANljv0hqC0YOihRFfJ73fg/edit?usp=sharing)
