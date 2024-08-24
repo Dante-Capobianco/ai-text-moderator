@@ -59,3 +59,34 @@ def flatten_weights(embed_weights, attention_weights, ffn_weights, classificatio
     flattened_weights.append(classification_weights[0]["class_weights"])
 
     return flattened_weights
+
+@tf.function
+def f1_score(y_true, y_pred):
+    """Key Components:
+    - Precision: The proportion of true positive predictions among all positive predictions made by the model.
+
+    Precision = True Positives / (True Positives + False Positives)
+
+    - Recall (Sensitivity): The proportion of true positive predictions among all actual positives in the data.
+
+    Recall = True Positives / (True Positives + False Negatives)
+
+    F1 Score Formula:
+    - F1 Score = 2 × (Precision × Recall) / (Precision + Recall)
+
+    What It Returns:
+    - The F1 score returns a value between 0 and 1.
+    - 1 indicates perfect precision and recall (an ideal model).
+    - 0 indicates either precision or recall is zero (the worst-case scenario).
+
+    - The F1 score is a balanced metric that considers both precision and recall, making it particularly useful in situations where class distributions are imbalanced or when both false positives and false negatives are costly.
+    """
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred > 0.5, tf.float32)
+    tp = tf.reduce_sum(y_true * y_pred, axis=0)
+    fp = tf.reduce_sum((1 - y_true) * y_pred, axis=0)
+    fn = tf.reduce_sum(y_true * (1 - y_pred), axis=0)
+    precision = tp / (tp + fp + tf.keras.backend.epsilon())
+    recall = tp / (tp + fn + tf.keras.backend.epsilon())
+    f1 = 2 * precision * recall / (precision + recall + tf.keras.backend.epsilon())
+    return tf.reduce_mean(f1)
