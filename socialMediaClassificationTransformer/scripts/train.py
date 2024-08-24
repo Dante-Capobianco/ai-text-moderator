@@ -36,6 +36,9 @@ import os
 
 os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 
+def save_checkpoint(checkpoint_manager):
+    checkpoint_manager.save()
+
 @tf.function
 def train(data, epochs, embed_weights, attention_weights, ffn_weights, classification_weights, optimizer, loss_fn, epoch_statistics, validation_data, checkpoint_manage):
     best_val_loss = float('inf')
@@ -153,7 +156,7 @@ def train(data, epochs, embed_weights, attention_weights, ffn_weights, classific
             best_epoch = epoch
             wait = 0  # Reset the patience counter
             # Save checkpoint outside the graph
-            tf.numpy_function(lambda: checkpoint_manage.save(), [], [])
+            tf.py_function(save_checkpoint, [checkpoint_manage], [])
         else:
             tf.print("This epoch did not improve from the previous")
             wait += 1

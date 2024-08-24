@@ -1,8 +1,6 @@
 #Store hyperparameters (learning rate, batch size, epochs, number of layers)
 
-"""
-
-"""
+#Good loss < 0.5; Good F1 > 0.7
 
 DATA_PATH = "data/datasets/"
 TOKENIZER_PATH = "data/tokenizer.py"
