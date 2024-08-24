@@ -6,12 +6,8 @@ import pickle
 from socialMediaClassificationTransformer.training.config import MAX_TOKEN_SIZE
 import tensorflow as tf
 
-physical_devices = tf.config.list_physical_devices('GPU')
-if physical_devices:
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-
-# Function to load data from a .pkl file with error handling
+# Function to load vocab list
 def load_vocab(file_path):
     vocab={}
 
@@ -20,14 +16,14 @@ def load_vocab(file_path):
             token = token.strip()
             vocab[token] = index
     return vocab
-
+# Function to load data from a .pkl file with error handling
 def load_data(file_path):
     with open(file_path, 'rb') as file:
         try:
             return pickle.load(file)
         except EOFError as e:
             raise EOFError(f"Error loading {file_path}: {e}")
-
+#Tokenize the cleaned data, identifying the largest part of each word matching an entry in vocab
 def wordpiece_tokenize(text, vocab):
     tokens = []
     for word in text.split():
@@ -52,7 +48,7 @@ def wordpiece_tokenize(text, vocab):
 
 def convert_tokens_to_ids(tokens, vocab):
     return [vocab.get(token, vocab['[UNK]']) for token in tokens]
-
+#Convert cleaned data to tokens, then convert to numerical ID
 def tokenize_dataset(data, vocab):
     tokenized_data = []
     for entry in data:
@@ -80,8 +76,6 @@ def tokenize_dataset(data, vocab):
 
     return tokenized_data
 
-vocab = load_vocab('../data/vocab/vocab.txt')
-
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[tf.io.serialize_tensor(value).numpy()]))
@@ -96,6 +90,7 @@ def serialize_example(token_ids, attention_mask, correct_labels):
     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
     return example_proto.SerializeToString()
 
+#Write each entry to a TfRecord
 def save_tokenized_data(file_path, tokenized_data):
     with tf.io.TFRecordWriter(file_path) as writer:
         for item in tokenized_data:
@@ -105,34 +100,35 @@ def save_tokenized_data(file_path, tokenized_data):
             example = serialize_example(token_ids, attention_mask, correct_labels)
             writer.write(example)
 
-    # # Save the tokenized data
-    # with open(file_path, 'wb') as file:
-    #     pickle.dump(data, file)
-    # print(f"Tokenized data successfully saved to {file_path}")
+if __name__ == "__main__":
+    #Use GPU & set up memory growth to avoid OOM errors
+    physical_devices = tf.config.list_physical_devices('GPU')
+    if physical_devices:
+        tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    vocab = load_vocab('../data/vocab/vocab.txt')
+    # Load and inspect each file, then tokenize
+    try:
+        train = load_data("../data/cleaned/cleaned_train.pkl")
+        tokenized_train = tokenize_dataset(train, vocab)
+        test = load_data("../data/cleaned/cleaned_test.pkl")
+        tokenized_test = tokenize_dataset(test, vocab)
+        val = load_data("../data/cleaned/cleaned_validation.pkl")
+        tokenized_validation = tokenize_dataset(val, vocab)
 
-# Load and inspect each file
-try:
-    train = load_data("../data/cleaned/cleaned_train.pkl")
-    tokenized_train = tokenize_dataset(train, vocab)
-    test = load_data("../data/cleaned/cleaned_test.pkl")
-    tokenized_test = tokenize_dataset(test, vocab)
-    val = load_data("../data/cleaned/cleaned_validation.pkl")
-    tokenized_validation = tokenize_dataset(val, vocab)
+        for data in [tokenized_train,
+                         tokenized_test,
+                           tokenized_validation]:
+            for entry in data[:5]:
+                print(entry)
 
-    for data in [tokenized_train,
-                     tokenized_test,
-                       tokenized_validation]:
-        for entry in data[:5]:
-            print(entry)
-
-        # Paths to save the tokenized datasets
-    output_dir = '../data/tokenized/'
-    # Save tokenized data to TFRecord files
-    save_tokenized_data(os.path.join(output_dir, 'tokenized_train.tfrecord'), tokenized_train)
-    save_tokenized_data(os.path.join(output_dir, 'tokenized_test.tfrecord'), tokenized_test)
-    save_tokenized_data(os.path.join(output_dir, 'tokenized_validation.tfrecord'), tokenized_validation)
+            # Paths to save the tokenized datasets
+        output_dir = '../data/tokenized/'
+        # Save tokenized data to TFRecord files
+        save_tokenized_data(os.path.join(output_dir, 'tokenized_train.tfrecord'), tokenized_train)
+        save_tokenized_data(os.path.join(output_dir, 'tokenized_test.tfrecord'), tokenized_test)
+        save_tokenized_data(os.path.join(output_dir, 'tokenized_validation.tfrecord'), tokenized_validation)
 
 
 
-except Exception as e:
-    print(f"Failed to process: {e}")
+    except Exception as e:
+        print(f"Failed to process: {e}")

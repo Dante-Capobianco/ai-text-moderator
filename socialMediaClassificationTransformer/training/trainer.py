@@ -6,6 +6,7 @@ from tensorflow.python.ops.numpy_ops import float32
 from socialMediaClassificationTransformer.training.config import \
     BINARY_CROSS_ENTROPY_WITH_THRESHOLDS_AND_NEUTRAL_EXCLUSIVITY, PENALTY_FACTOR
 
+#Learnign schedule with warmup steps containing a linearly increasing rate, then a decaying rate after that
 class WarmupThenDecaySchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
     @tf.function
     def __init__(self, initial_learning_rate, warmup_steps, decay_steps, decay_rate):
@@ -41,7 +42,7 @@ def loss_with_neutral_penalty(loss, probabilities):
     total_loss = loss + (tf.cast(penalty, float32) * PENALTY_FACTOR)
     return total_loss
 
-
+#Return a single list of all weights in the model
 def flatten_weights(embed_weights, attention_weights, ffn_weights, classification_weights):
     # Flatten embed_weights (already a single tensor)
     flattened_weights = [embed_weights[0]["embed_weights"]]

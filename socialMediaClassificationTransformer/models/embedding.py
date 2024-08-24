@@ -10,6 +10,7 @@ from socialMediaClassificationTransformer.training.config import DIMENSION, MAX_
 import pickle
 import tensorflow as tf
 
+#Gather the data entries in the desired format from the TfRecord
 @tf.function
 def _parse_function(proto):
     # Define your features to be parsed
@@ -39,19 +40,10 @@ def compute_sample_weight(correct_labels, class_weights_tensor):
     weights = tf.reduce_sum(tf.cast(correct_labels, tf.float32) * class_weights_tensor, axis=-1)
     return weights
 
+#Loading batches of data in parallel with running the transformer; data can be loaded dynamically to ensure
+#the proportions of each label in class_weights is met
 @tf.function
 def load_and_prepare_data(file_path, batch_size):
-    # Load the data from the pickle file
-    # data = load_data(file_path)
-
-    # Removed for efficiency - using TF dataset
-    # # Randomize the order of the data
-    # random.shuffle(data)
-    #
-    # # Grab only the first 'batch_size' entries
-    # batch_data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
-    #
-    # return batch_data
 
     dataset = tf.data.TFRecordDataset(file_path)
     dataset = dataset.map(_parse_function, num_parallel_calls=tf.data.AUTOTUNE)
@@ -59,7 +51,7 @@ def load_and_prepare_data(file_path, batch_size):
     class_weights = [0.042985456201923594, 0.12078438894694984, 0.10910276845817135, 0.5187072652741072, 0.019151627059159584, 0.18837437842777963, 0.0008941156319089033]
     class_weights_tensor = tf.constant(class_weights, dtype=tf.float32)
     """
-    above calculate from the below computation:
+    above calculated from the below computation:
     class_counts = {
         'spam': 34379,
         'toxic': 12235,
@@ -88,14 +80,14 @@ def load_and_prepare_data(file_path, batch_size):
         normalized_class_weights['identity_hate'],
         normalized_class_weights['neutral']
     ]
-
-    print(weights_in_order)
     """
+    #Get desired balance of label occurrences
     def sample_weighted_examples(token_ids, attention_mask, correct_labels):
         sample_weight = compute_sample_weight(correct_labels, class_weights_tensor)
 
         return token_ids, attention_mask, correct_labels, sample_weight
 
+    #Apply desired weights across all classes to keep batches in proportion
     if INCLUDE_DYNAMIC_BALANCING:
         dataset = dataset.map(sample_weighted_examples, num_parallel_calls=tf.data.AUTOTUNE)
         # Resample the dataset to balance classes
@@ -115,20 +107,7 @@ def load_and_prepare_data(file_path, batch_size):
 
     return dataset
 
-
-
-
-# @tf.function
-# def load_data(file_path):
-#     with open(file_path, 'rb') as file:
-#         try:
-#             data = pickle.load(file)
-#             for entry in data:
-#                 print(f"Yielding: {entry}")
-#                 yield entry
-#         except EOFError as e:
-#             raise EOFError(f"Error loading {file_path}: {e}")
-
+#Apply sin/cos functions to measure location in a sequence based on index position
 @tf.function
 def get_positional_encoding(seq_len, d_model):
     position = tf.range(seq_len, dtype=tf.float32)[:, tf.newaxis]
@@ -147,9 +126,14 @@ def get_positional_encoding(seq_len, d_model):
     pe = tf.reshape(pe, (seq_len, d_model))
 
     return pe
+
+#Find the embedding for each token in the batch
 @tf.function
 def embedding_lookup(token_ids_batch, embedding_weights):
     return tf.nn.embedding_lookup(embedding_weights, token_ids_batch)
+
+#Retrieve the embedding for each token & apply it with the positional encoding
+#Do not apply embeddings to masked tokens if configured to do so
 @tf.function
 def forward_pass(token_ids_batch, embedding_weights, attention_mask, training=True):
 
@@ -167,9 +151,9 @@ def forward_pass(token_ids_batch, embedding_weights, attention_mask, training=Tr
 
     return sum_embeddings
 
+#Use of Xavier instead of He initialization due to no usage of an activation function
 def init_embedding_weights():
     embed_weights = []
-    #Consider He initialization; currently using xavier
     weights = {
             "embed_weights": tf.Variable(initial_value=tf.random.uniform(shape=(VOCAB_SIZE, DIMENSION), minval=-0.5, maxval=0.5, dtype=tf.float32),
                                          trainable=True  # Indicates that the variable should be trainable
@@ -178,6 +162,8 @@ def init_embedding_weights():
     }
     embed_weights.append(weights)
     return embed_weights
+
+#Gather the batches of data from the appropriate TfRecord
 @tf.function
 def init_embedding(file_path):
     try:

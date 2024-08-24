@@ -15,14 +15,14 @@ from socialMediaClassificationTransformer.models.classification_head import init
 
 from socialMediaClassificationTransformer.models.embedding import init_embedding_weights, init_embedding
 from socialMediaClassificationTransformer.models.transformer import run_transformer
-from socialMediaClassificationTransformer.models.attention import init_attention_weights, xavier_initialization
+from socialMediaClassificationTransformer.models.attention import init_attention_weights
 from socialMediaClassificationTransformer.models.feedforward import init_ffn_weights
 from socialMediaClassificationTransformer.scripts.evaluate import evaluate_batch, update_epoch_statistics, \
-    print_epoch_statistics
+    print_epoch_statistics, calculate_average_accuracy
 from socialMediaClassificationTransformer.training.config import EPOCHS, DIMENSION, MAX_TOKEN_SIZE, BATCH_SIZE, \
     LEARNING_RATE, WARMUP_STEPS, DECAY_STEPS, ADAMW_WEIGHT_DECAY, DECAY_RATE, \
     BINARY_CROSS_ENTROPY_WITH_THRESHOLDS_AND_NEUTRAL_EXCLUSIVITY, VOCAB_SIZE, TOTAL_VALIDATION_BATCHES, PATIENCE, \
-    ACCEPTABLE_LOSS_GAP
+    ACCEPTABLE_LOSS_GAP, ACCEPTABLE_ACCURACY_GAP
 from tensorflow.keras.mixed_precision import set_global_policy
 from tensorflow.keras.optimizers.experimental import AdamW
 
@@ -36,13 +36,14 @@ import os
 
 os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 
+#Save a checkpoint after an epoch that has outperformed the prior one
 def save_checkpoint(checkpoint_manager):
     checkpoint_manager.save()
 
 @tf.function
 def train(data, epochs, embed_weights, attention_weights, ffn_weights, classification_weights, optimizer, loss_fn, epoch_statistics, validation_data, checkpoint_manage):
     best_val_loss = float('inf')
-    best_val_f1 = 0.0
+    best_val_accuracy = 0.0
     best_epoch = 0
     wait = 0
     for epoch in tf.range(epochs):  # Simulate the training epochs
@@ -52,7 +53,7 @@ def train(data, epochs, embed_weights, attention_weights, ffn_weights, classific
 
         for token_ids_batch, attention_masks_batch, correct_labels_batch in data:
             #Reset to beginning of the dataset for the next epoch after finished with all steps initialized in config.py
-            if training_steps >= WARMUP_STEPS + DECAY_STEPS:
+            if training_steps > WARMUP_STEPS + DECAY_STEPS:
                 break
             all_weights = flatten_weights(embed_weights, attention_weights, ffn_weights, classification_weights)
 
@@ -64,11 +65,9 @@ def train(data, epochs, embed_weights, attention_weights, ffn_weights, classific
 
             #call transformer to run through layers once
             #token_ids_batch (list of tensors each containing list of numbers representing tokens)
-            #3 checks for transformer output: stability (highs & lows consistent across batches, spread in values
-            # decrease over epochs, not overly narrow variance from layer norm
             with tf.GradientTape() as tape:
-                output = run_transformer(token_ids_batch, embed_weights, attention_weights, attention_masks_batch, True, ffn_weights, classification_weights)
-                # Calculate loss
+                output = run_transformer(token_ids_batch, embed_weights, attention_weights, attention_masks_batch, True, ffn_weights, classification_weights, False)
+                # Calculate loss & probabilities
                 if BINARY_CROSS_ENTROPY_WITH_THRESHOLDS_AND_NEUTRAL_EXCLUSIVITY:
                     loss_value = loss_fn(tf.cast(correct_labels_batch, tf.float32), tf.cast(output, tf.float32))
                     probabilities = output
@@ -77,23 +76,24 @@ def train(data, epochs, embed_weights, attention_weights, ffn_weights, classific
                     loss_value = tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.cast(correct_labels_batch, tf.float32), logits=output)
                     loss_value = tf.reduce_mean(loss_value)
                     probabilities = tf.nn.sigmoid(output)
+                #Apply neutral exclusivity penalty
                 loss_value = loss_with_neutral_penalty(loss_value, probabilities)
             # Backpropagation: compute gradients
             grads = tape.gradient(loss_value, all_weights)
 
-
+            #Use Adam optimizer on gradients
             optimizer.apply_gradients(zip(grads, all_weights))
 
-            # Evaluate how many labels were correctly predicted
+            # Evaluate how many labels were correctly predicted and training loss
             total_training_loss += loss_value
-            correct_predictions = evaluate_batch(correct_labels_batch, probabilities)
+            correct_predictions = evaluate_batch(correct_labels_batch, probabilities, True)
             epoch_statistics = update_epoch_statistics(correct_predictions, epoch_statistics)
 
             training_steps += 1
 
 
-            # Implemented due to GPU limitations when applying above method
-            #NEED TO USE DECAY RATE OR USE ADAM
+            # This (or manual version of Adam below) can be implemented due to GPU limitations when
+            # applying above method of using optimizer
             # for var, grad in zip(all_weights, grads):
             #     if grad is not None:
             #         var.assign_sub(grad * optimizer.learning_rate)
@@ -113,22 +113,29 @@ def train(data, epochs, embed_weights, attention_weights, ffn_weights, classific
             # i += 1
 
         avg_training_loss = total_training_loss / tf.cast(training_steps, tf.float32)
+        tf.print("--- TRAINING ---")
+        # Print the statistics for the epoch
+        print_epoch_statistics(epoch_statistics)
         tf.print("Training Loss:", avg_training_loss)
+        #Percentage accuracy - probability of getting a label correct as yes (1) or no (0)
+        tf.print("Training Accuracy (KEY STAT FOR COMPARISON):", calculate_average_accuracy(epoch_statistics), "%")
 
         # Validation Phase
+        epoch_statistics = tf.zeros([8], dtype=tf.int32)
         total_val_loss = 0.0
         total_val_f1 = 0.0
         val_steps = 0
-
-        tf.print("Validation for Epoch", epoch + 1, "/", epochs)
         for val_token_ids_batch, val_attention_masks_batch, val_correct_labels_batch in validation_data:
-            if val_steps >= TOTAL_VALIDATION_BATCHES:
+            #Break out of loop once reached end of validation
+            if val_steps > TOTAL_VALIDATION_BATCHES:
                 break
+            #Ensure shape during graph creation to avoid errors
             val_token_ids_batch = tf.ensure_shape(val_token_ids_batch, [BATCH_SIZE, MAX_TOKEN_SIZE])
             val_attention_masks_batch = tf.ensure_shape(val_attention_masks_batch, [BATCH_SIZE, MAX_TOKEN_SIZE])
 
-            output = run_transformer(val_token_ids_batch, embed_weights, attention_weights, val_attention_masks_batch, False, ffn_weights, classification_weights)
+            output = run_transformer(val_token_ids_batch, embed_weights, attention_weights, val_attention_masks_batch, False, ffn_weights, classification_weights, False)
 
+            #Get loss and probability from transformer output
             if BINARY_CROSS_ENTROPY_WITH_THRESHOLDS_AND_NEUTRAL_EXCLUSIVITY:
                 val_loss_value = loss_fn(tf.cast(val_correct_labels_batch, tf.float32), tf.cast(output, tf.float32))
                 val_probabilities = output
@@ -137,26 +144,35 @@ def train(data, epochs, embed_weights, attention_weights, ffn_weights, classific
                 val_loss_value = tf.reduce_mean(val_loss_value)
                 val_probabilities = tf.nn.sigmoid(output)
 
+            #Calculate F1 score, occurrences of each prediction, and loss
             val_f1 = f1_score(val_correct_labels_batch, val_probabilities)
             total_val_loss += val_loss_value
             total_val_f1 += val_f1
             val_steps += 1
 
+            correct_predictions = evaluate_batch(val_correct_labels_batch, val_probabilities, True)
+            epoch_statistics = update_epoch_statistics(correct_predictions, epoch_statistics)
+
         avg_val_loss = total_val_loss / tf.cast(val_steps, tf.float32)
         avg_val_f1 = total_val_f1 / tf.cast(val_steps, tf.float32)
+        val_accuracy = calculate_average_accuracy(epoch_statistics)
+        tf.print("--- VALIDATION ---")
+        print_epoch_statistics(epoch_statistics)
         tf.print("Validation Loss:", avg_val_loss)
         tf.print("Validation F1:", avg_val_f1)
+        tf.print("Validation Accuracy (KEY STAT FOR COMPARISON):", val_accuracy, "%", "| previous best accuracy:", best_val_accuracy, "%")
+        epoch_statistics = tf.zeros([8], dtype=tf.int32)
 
         # Early Stopping Logic - ensure validation loss & accuracy improves, and training loss does not significantly
         # gap validation loss (indicating overfitting)
-        if avg_val_loss < best_val_loss and avg_val_f1 > best_val_f1 and avg_val_loss <= avg_training_loss + ACCEPTABLE_LOSS_GAP:
+        if avg_val_loss < best_val_loss and val_accuracy > best_val_accuracy - ACCEPTABLE_ACCURACY_GAP and avg_val_loss <= avg_training_loss + ACCEPTABLE_LOSS_GAP:
             tf.print("Best epoch to date")
             best_val_loss = avg_val_loss
-            best_val_f1 = avg_val_f1
+            best_val_accuracy = val_accuracy if val_accuracy > best_val_accuracy else best_val_accuracy
             best_epoch = epoch
             wait = 0  # Reset the patience counter
             # Save checkpoint outside the graph
-            tf.py_function(save_checkpoint, [checkpoint_manage], [])
+            tf.numpy_function(lambda: save_checkpoint(checkpoint_manage), [], [])
         else:
             tf.print("This epoch did not improve from the previous")
             wait += 1
@@ -164,12 +180,10 @@ def train(data, epochs, embed_weights, attention_weights, ffn_weights, classific
                 tf.print(f"Early stopping at epoch {epoch + 1} with best epoch at epoch {best_epoch}")
                 break
 
-        # Print the statistics for the epoch
-        print_epoch_statistics(epoch_statistics)
-
 
 # Example usage
 if __name__ == "__main__":
+    #Set up memory growth and use of GPU
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:
         try:
@@ -178,6 +192,8 @@ if __name__ == "__main__":
             print("Memory growth enabled")
         except RuntimeError as e:
             print(e)
+
+    #Initialize weights & gather data from TfRecord
 
     embedding_weights = init_embedding_weights()
     att_weights = init_attention_weights()
@@ -205,15 +221,13 @@ if __name__ == "__main__":
     else:
         loss_fn = None
 
+    #Set up the checkpoints to store weights after each successful epoch
     checkpoint = tf.train.Checkpoint(optimizer=optimizer, weights=flatten_weights(embedding_weights, att_weights, ffn_weight, class_weights))
 
 
-    checkpoint_manager = tf.train.CheckpointManager(checkpoint, './checkpoints', max_to_keep=3)
+    checkpoint_manager = tf.train.CheckpointManager(checkpoint, './checkpoints', max_to_keep=5)
 
 
 
     # Start training
     train(data_items, EPOCHS, embedding_weights, att_weights, ffn_weight, class_weights, optimizer, loss_fn, statistics, val_items, checkpoint_manager)
-
-    # Save the model at the end of each training session
-    #save_model_checkpoint(checkpoint_manager)

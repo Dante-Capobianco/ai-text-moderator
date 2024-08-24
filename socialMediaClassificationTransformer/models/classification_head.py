@@ -12,9 +12,7 @@ from socialMediaClassificationTransformer.training.config import DIMENSION, SPAM
     BINARY_CROSS_ENTROPY_WITH_THRESHOLDS_AND_NEUTRAL_EXCLUSIVITY
 from socialMediaClassificationTransformer.models.attention import xavier_initialization
 
-#Can also attempt CLS classification with the INCLUDE_CLS parameter set to True; or avg_pooling
-
-
+#Set up classification weights using Xavier (due to no activation function being used)
 def init_classification_weights():
     class_weights = []
     #Consider He initialization; currently using xavier
@@ -56,13 +54,13 @@ def classify_sequences(inputs, classification_weights):
         # Apply sigmoid activation for multi-label classification
         probabilities = tf.nn.sigmoid(output)
 
-        # Adjust thresholds for rare classes as needed
+        # Thresholds for each label
         thresholds = tf.constant([SPAM_THRESHOLD, TOXIC_THRESHOLD, OBSCENE_THRESHOLD, THREAT_THRESHOLD, INSULT_THRESHOLD, IDENTITY_HATE_THRESHOLD, NEUTRAL_THRESHOLD], dtype=tf.float32)
 
         # Apply threshold to get binary labels
         labels = tf.cast(probabilities > thresholds, tf.int32)
 
-        # Implemented in conjunction with the loss function instead
+        # Implemented to minimize additional loss granted to classifications with neutral + another label (found in loss function)
         # Enforce the neutral condition: if neutral (last label) is 1, all others must be 0
         neutral_mask = labels[:, -1]  # Extract the neutral column (batch_size,)
 

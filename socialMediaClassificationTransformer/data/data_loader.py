@@ -11,8 +11,7 @@ import numpy as np
 import os
 import pickle
 
-all_data = []
-
+# Display occurrence of each label & average characters per dataset
 def analyze_data(data):
     label_counts = Counter()
     char_counts = []
@@ -29,9 +28,10 @@ def analyze_data(data):
     return label_counts, avg_char_count
 
 def generate_random_id():
-    # Generate a short random ID (taking the first 8 characters of a UUID)
+    # Generate a short random ID (taking the first 8 characters of a UUID) so every message has an ID
     return str(uuid.uuid4())[:8]
 
+#Apply various cleaning strategies before tokenizing
 def clean_text(message):
     pattern = r"(Content-Type:|Subject:|Re:|User-Agent:|MIME-Version:|Content-Transfer-Encoding:|name=|charset=|boundary=|Content-ID:|format=|Content-Disposition:|filename=|Message-ID:|X-Accept-Language:|To:|References:|In-Reply-To:|From:|Date:)\s?\S*"
 
@@ -49,6 +49,7 @@ def clean_text(message):
 
     return message.strip()
 
+#Open each CSV file, clean it, then create the data entry with an id, the message, and the scoring across the labels
 def process_data(input_file):
     data = []
     csv.field_size_limit(1000000)
@@ -79,14 +80,10 @@ def process_data(input_file):
                     data.append(data_entry)
     return data
 
-for file in ['raw/train.csv', 'raw/train_jigsaw_bias.csv', 'raw/test_public_expanded_jigsaw_bias.csv', 'raw/test_private_expanded_jigsaw_bias.csv','raw/train_spam.csv']:
-    cleaned_data = process_data(file)
-    all_data.extend(cleaned_data)
-    # Print the first few cleaned data entries to verify
-    for entry in cleaned_data[:5]:
-        print(entry)
 
 
+#Split the data across 3 sets with an 80-10-10 split for training, testing, and validation
+#Rare classes occurring 1-2 times are avoided to use stratified splitting
 def stratified_split(data, split_ratios):
     labels_combined = []
     rare_class_label = (0, 0, 1, 1, 0, 1, 0)
@@ -123,33 +120,10 @@ def stratified_split(data, split_ratios):
 
     return train_data, val_data, test_data
 
-train_data, val_data, test_data = stratified_split(all_data, [0.8, 0.1, 0.1])
-
-
-train_distribution, train_avg_chars = analyze_data(train_data)
-val_distribution, val_avg_chars = analyze_data(val_data)
-test_distribution, test_avg_chars = analyze_data(test_data)
-#store to pkl file
-
-print(f"Training set: {train_distribution}, Avg chars: {train_avg_chars}")
-print(f"Validation set: {val_distribution}, Avg chars: {val_avg_chars}")
-print(f"Test set: {test_distribution}, Avg chars: {test_avg_chars}")
-
+#Check if empty messages are found
 def check_empty_or_null(data):
     null_or_empty_count = sum(1 for entry in data if entry['text'] is None or entry['text'].strip() == "")
     return null_or_empty_count
-
-# Check for null or empty text fields in each dataset
-train_null_or_empty = check_empty_or_null(train_data)
-val_null_or_empty = check_empty_or_null(val_data)
-test_null_or_empty = check_empty_or_null(test_data)
-
-print(f"Train data has {train_null_or_empty} entries with null or empty text fields.")
-print(f"Validation data has {val_null_or_empty} entries with null or empty text fields.")
-print(f"Test data has {test_null_or_empty} entries with null or empty text fields.")
-
-# Define the existing output directory
-output_dir = 'cleaned/'
 
 # Function to save data as a .pkl file
 def save_as_pkl(data, filename):
@@ -157,10 +131,42 @@ def save_as_pkl(data, filename):
     with open(filepath, 'wb') as file:
         pickle.dump(data, file)
 
-# Save the train, validation, and test data as .pkl files
-save_as_pkl(train_data, 'cleaned_train.pkl')
-save_as_pkl(val_data, 'cleaned_validation.pkl')
-save_as_pkl(test_data, 'cleaned_test.pkl')
+if __name__ == "__main__":
+    all_data = []
+    for file in ['raw/train.csv', 'raw/train_jigsaw_bias.csv', 'raw/test_public_expanded_jigsaw_bias.csv', 'raw/test_private_expanded_jigsaw_bias.csv','raw/train_spam.csv']:
+        cleaned_data = process_data(file)
+    all_data.extend(cleaned_data)
+    # Print the first few cleaned data entries to verify
+    for entry in cleaned_data[:5]:
+        print(entry)
 
-print("Data saved successfully in the 'cleaned/' folder.")
+    train_data, val_data, test_data = stratified_split(all_data, [0.8, 0.1, 0.1])
+
+
+    train_distribution, train_avg_chars = analyze_data(train_data)
+    val_distribution, val_avg_chars = analyze_data(val_data)
+    test_distribution, test_avg_chars = analyze_data(test_data)
+
+    print(f"Training set: {train_distribution}, Avg chars: {train_avg_chars}")
+    print(f"Validation set: {val_distribution}, Avg chars: {val_avg_chars}")
+    print(f"Test set: {test_distribution}, Avg chars: {test_avg_chars}")
+
+    # Check for null or empty text fields in each dataset
+    train_null_or_empty = check_empty_or_null(train_data)
+    val_null_or_empty = check_empty_or_null(val_data)
+    test_null_or_empty = check_empty_or_null(test_data)
+
+    print(f"Train data has {train_null_or_empty} entries with null or empty text fields.")
+    print(f"Validation data has {val_null_or_empty} entries with null or empty text fields.")
+    print(f"Test data has {test_null_or_empty} entries with null or empty text fields.")
+
+    # Define the existing output directory
+    output_dir = 'cleaned/'
+
+    # Save the train, validation, and test data as .pkl files
+    save_as_pkl(train_data, 'cleaned_train.pkl')
+    save_as_pkl(val_data, 'cleaned_validation.pkl')
+    save_as_pkl(test_data, 'cleaned_test.pkl')
+
+    print("Data saved successfully in the 'cleaned/' folder.")
 
