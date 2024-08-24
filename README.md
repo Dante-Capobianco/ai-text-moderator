@@ -15,6 +15,9 @@ make note of performing gpu optimziations using tensorflow-gpu
 
 consider adding weight in embeddings for training only if rare labels involved in certain sequences and/or greater weight in loss finction for mistake on rare classes
 
+### Report
+Available at: [CapoDev Multi-Label Text Classification Transformer](https://docs.google.com/document/d/1tZsWFJ38rv13aUw0n1uIgANljv0hqC0YOihRFfJ73fg/edit?usp=sharing)
+
 ### Citations
 
 - **Cormack, G. V. (2007). TREC 2007 Spam Track Public Corpus [Data set].** University of Waterloo. Available at: [https://plg.uwaterloo.ca/~gvcormac/treccorpus07/about.html](https://plg.uwaterloo.ca/~gvcormac/treccorpus07/about.html)
