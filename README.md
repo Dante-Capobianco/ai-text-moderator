@@ -1,4 +1,4 @@
-# ai-text-moderator
+# Social Media Multi-Label Text Classification Transformer
 As CapoDev Apps’ founder, I am pursuing a cleaner social platform to solve security risks, toxicity, and ingenuine online representations. Content moderation is a cornerstone of mainstream platforms, yet most cyberbullies get away with millions of posts containing harmful comments (with over 60% of youth & 40% of adults being victims). Platforms lost their purpose, yet my solution offers a large-scale approach to moderation.
 
 Through an encoder transformer with innovative features, I have developed a Python model that identifies if short/long-form text is spam, toxic, threat, insult, identity hate, obscene, and/or neutral. With ~3.4 million data points from 3 credible datasets and ~97.6% accuracy on test/validation data, this offers a revolutionary, speedy way to automate content review. 
