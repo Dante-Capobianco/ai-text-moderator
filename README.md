@@ -40,7 +40,11 @@ A second method is shown here:
 1. Run the data_loader.py to generate cleaned datasets in the data/cleaned directory
 2. Run the tokenizer.py to generate tokenized datasets in the data/tokenized directory (if you wish to adjust the MAX_TOKEN_SIZE parameter in the config.py file, it must be done in this step - the tokenized data will have to be regenerated for any future changes to this parameter)
 3. By now, your data directory structure, with the original datasets downloaded, should look like this: ![Screenshot 2024-08-24 162039](https://github.com/user-attachments/assets/10baafad-524c-4b0e-8ef9-307ca9c4192f)
-4. CONTINUE STEPS HERE
+4. Run the train.py file - this is where you may need to adjust parameters in the config.py file to avoid OOM errors & optimize the model
+5. Review the results from training and validation after each epoch to determine which set of checkpointed weights are performing most effectively (note that the number of saved weight sets can be adjusted through the max_to_keep setting when initializing the checkpoint object in the train.py, real_world_data_predict.py, and predict.py)
+6. Once satisfied with a set of weights, run the saved model in predict.py to test it on the test dataset. A unique feature of this model (elaborated on in the report) is that parameters can be tuned during testing (such as thresholds to adjust the labelling sensitivity under each category)
+7. Once satisfied with the saved model & tuned test parameters, it can be further tested & tuned using live user input in the real_world_data_predict.py file
+
 
 ## Report
 Available at: [CapoDev Multi-Label Text Classification Transformer](https://docs.google.com/document/d/1tZsWFJ38rv13aUw0n1uIgANljv0hqC0YOihRFfJ73fg/edit?usp=sharing)
