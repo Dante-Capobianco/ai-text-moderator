@@ -17,13 +17,6 @@ With a proven performance & able to review hundreds of inputs within seconds, th
 [Download the dataset from Google Drive](https://drive.google.com/drive/folders/1oZYg86yW4SJTQVdV3iR5N0IkcwxV_0zP?usp=sharing)
 *Note: if the raw_train_test_val_data.zip is hidden, you can either jump straight to downloading the cleaned/tokenized data, or download the appropriate datasets from the citation links below (ensuring the naming convention matches the naming in **Step 4.3**)
 
-
-Steps to setup
-1. Clone repo to local IDE
-2. Install Python plugin (i.e. on marketplace on IntelliJ)
-3. Select Python as SDK
-4. Install neccessary dependencies (found in setup.py)
-
 ### 2. Prerequisites
 Ensure you have the prerequisites: Git, Python 3.10.0 as your SDK, CUDA 11.2, cuDNN 8.1 (for IntelliJ users, ensure you have the Python Community Edition plugin as your **only active Python plugin**.
 
