@@ -1,5 +1,14 @@
 # ai-text-moderator
-AI model flagging potentially harmful text-based content, such as violent, explicit, or sexual content, hate speech, insults, or spam
+As CapoDev Apps’ founder, I am pursuing a cleaner social platform to solve security risks, toxicity, and ingenuine online representations. Content moderation is a cornerstone of mainstream platforms, yet most cyberbullies get away with millions of posts containing harmful comments (with over 60% of youth & 40% of adults being victims). Platforms lost their purpose, yet my solution offers a large-scale approach to moderation.
+
+Through an encoder transformer with innovative features, I have developed a Python model that identifies if short/long-form text is spam, toxic, threat, insult, identity hate, obscene, and/or neutral. With ~3.4 million data points from 3 credible datasets and ~97.6% accuracy on test/validation data, this offers a revolutionary, speedy way to automate content review. 
+
+Some of the most inventive features include:
+- NVIDIA GPU optimization using Tensorflow-GPU-10.0.0, CUDA-11.2, cuDNN-8.1, TFRecords for tokenized data, and initializing Tensorflow graph execution, parallel batch loading/processing & dynamic memory growth
+- One-of-a-kind parameters for customizable hypertuning - i.e. enabling either binary cross entropy applied to binary probabilities (with thresholds & a neutral exclusivity rule applied) or sigmoid cross entropy on logits for loss calculation
+- Considering a combination of validation loss value decreases, validation accuracy improvements & training-to-validation loss gaps (to avoid overfitting) to determine if each epoch’s weights should be checkpointed; plus, a patience parameter is used to early stop training if 1+ epochs show no improvement
+
+With a proven performance & able to review hundreds of inputs within seconds, this transformer can improve the cleanliness of online interactions.
 
 
 ## Steps to Configure & Run
@@ -40,13 +49,13 @@ A second method is shown here:
 3. By now, your data directory structure, with the original datasets downloaded, should look like this: ![Screenshot 2024-08-24 162039](https://github.com/user-attachments/assets/10baafad-524c-4b0e-8ef9-307ca9c4192f)
 4. CONTINUE STEPS HERE
 
-### Report
+## Report
 Available at: [CapoDev Multi-Label Text Classification Transformer](https://docs.google.com/document/d/1tZsWFJ38rv13aUw0n1uIgANljv0hqC0YOihRFfJ73fg/edit?usp=sharing)
 
-### Presentation
+## Presentation
 Find the video from **CapoDev Apps** on **[Instagram](https://www.instagram.com/capodevapps/), [TikTok](https://www.tiktok.com/@capodevapps?is_from_webapp=1&sender_device=pc), [Facebook](https://www.facebook.com/share/yqn765FgofCrR2jr/?mibextid=LQQJ4d), and [YouTube](https://youtube.com/@capodevapps?si=DF53TrDJOSbCm4Hj)**. Dante, the visionary behind CapoDev, leads the mobile & web app development processes with the mission of developing applications that impact the daily routines of the everyday consumer. Currently, Dante is leading the development of a revolutionary social app addressing major security & socialization issues present on numerous social platforms. 
 
-### Citations
+## Citations
 
 - **Cormack, G. V. (2007). TREC 2007 Spam Track Public Corpus [Data set].** University of Waterloo. Available at: [https://plg.uwaterloo.ca/~gvcormac/treccorpus07/about.html](https://plg.uwaterloo.ca/~gvcormac/treccorpus07/about.html)
 - **Kaggle. (2019). Jigsaw Unintended Bias in Toxicity Classification [Data set].** Available at: [https://www.kaggle.com/c/jigsaw-unintended-bias-in-toxicity-classification/data](https://www.kaggle.com/c/jigsaw-unintended-bias-in-toxicity-classification/data)
